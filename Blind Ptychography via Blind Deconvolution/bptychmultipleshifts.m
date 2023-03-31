@@ -6,7 +6,7 @@ clear all
 L = 64; %number of measurements
 delta = ceil(log2(L)); %Support of mask
 Ntrue= 6; %Size of unknown part of signal
-Tests = 10;
+Tests = 100;
 Iterations = 1000;
 Y1 = (1/2)*ones(1000,1); Y2 = (1/2)*ones(1000,1); Y3 = (1/2)*ones(1000,1);
 errorxmax = zeros(7,1); 
@@ -167,10 +167,10 @@ eta = 1;
 %Iterating u & v
 u = u - eta*(nablafh + nablagh);
 v = v - eta*(nablafx + nablagx);
-%Correcting for norms
-normu = norm(u); 
-u = u*norm(ftrue)/normu;
-v = v*normu/norm(ftrue);
+% %Correcting for norms
+% normu = norm(u); 
+% u = u*norm(ftrue)/normu;
+% v = v*normu/norm(ftrue);
 
 
 if shft<=delta
@@ -180,11 +180,10 @@ else
 end
 g = C*conj(v);
 
-% Y1(t) = (norm(cconv(f,g,L) - ytrue,2))/norm(ytrue,2);
 Y1(t) = norm(cconv(f,g,L) - ytrue)^2/norm(ytrue)^2;
 Y2(t) = norm(abs(f) - abs(ftrue))^2/norm(ftrue)^2;
 Y3(t) = norm(abs(g) - abs(gtrue))^2/norm(gtrue)^2;
-[SNR,test,shft,mod(t,1000),I/1000,eta,10*log10(Y3(t))]
+[SNR,test,shft,mod(t,1000),I/1000,eta,10*log10(Y1(t))]
 end
 
 
@@ -207,11 +206,7 @@ xtrueest = sqrt(diag(X)) .* xrec;
 truexest = Ctrue*xtrueest;
 phaseOffset = angle( (truexest'*truex) / (truex'*truex) );
 truexest = truexest* exp(1i*phaseOffset); %Adjust for phase ambiguity
-errorxshift = 10*log10( norm(truexest - truex)^2/ norm(truex)^2 );
-%  [floor(t/1000),mod(t,1000),I/1000,eta,Y1(t),Y2(t),Y3(t),error]
 
-xestimate(:,shft) = truexest; 
-errorx(shft,test) = errorxshift;
 %% Computing Mask
 
 truegest = zeros(L,L);
@@ -242,10 +237,22 @@ end
 mrec = mrec./abs(mrec);
 truemest = [sqrt( diag(M) ) .* mrec; zeros(L-delta,1)];
 phaseOffset = angle( (truemest'*truem) / (truem'*truem) );
+alphaerror = norm(truemest)/norm(truem);
 truemest = norm(truem)*(truemest* exp(1i*phaseOffset))/norm(truemest); %Adjust for phase ambiguity
 errormshift = 10*log10(norm(truemest - truem)^2/norm(truem)^2);
 mestimate(:,shft) = truemest; 
 errorm(shft,test) = errormshift;
+
+%%  Computing object error
+
+truexest = truexest*alphaerror;
+errorxshift = 10*log10( norm(truexest - truex)^2/ norm(truex)^2 );
+
+xestimate(:,shft) = truexest; 
+errorx(shft,test) = errorxshift;
+
+
+%% Computing measurement errors
 Yest=zeros(L,L);
 for k=0:L-1
     Yest(:,k+1) = abs( fft(xestimate(:,shft).*circshift(mestimate(:,shft),-k), L) ).^2;
@@ -253,9 +260,6 @@ end
 errory(shft,test) = norm(Yest - Y,'fro')^2/norm(Y,'fro')^2;
 end
 
-%[errorx errorm errory]
-
-% [E,iy] = min(errory);
 
 for i=1:2*delta-1
     for j=1:2*delta-1
@@ -284,7 +288,7 @@ errorxnoshift(counter) = mean(errorx(1,:));
 errormmax(counter) = mean(max(errorm(1:2*delta-1,:),[],1));
 errormmin(counter) = mean(min(errorm(1:2*delta-1,:),[],1));
 errormargmin(counter) = mean(errorm(2*delta,:));
-errormnoshift(counter) = mean(errorx(1,:));
+errormnoshift(counter) = mean(errorm(1,:));
 end
 
 %% Plotting figures

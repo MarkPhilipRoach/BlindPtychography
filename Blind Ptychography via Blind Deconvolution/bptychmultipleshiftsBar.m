@@ -164,10 +164,10 @@ eta = 1;
 %Iterating u & v
 u = u - eta*(nablafh + nablagh);
 v = v - eta*(nablafx + nablagx);
-%Correcting for norms
-normu = norm(u); 
-u = u*norm(ftrue)/normu;
-v = v*normu/norm(ftrue);
+% %Correcting for norms
+% normu = norm(u); 
+% u = u*norm(ftrue)/normu;
+% v = v*normu/norm(ftrue);
 
 
 if shft<=delta
@@ -239,10 +239,23 @@ end
 mrec = mrec./abs(mrec);
 truemest = [sqrt( diag(M) ) .* mrec; zeros(L-delta,1)];
 phaseOffset = angle( (truemest'*truem) / (truem'*truem) );
+alphaerror = norm(truemest)/norm(truem);
 truemest = norm(truem)*(truemest* exp(1i*phaseOffset))/norm(truemest); %Adjust for phase ambiguity
 errormshift = 10*log10(norm(truemest - truem)^2/norm(truem)^2);
 mestimate(:,shft) = truemest; 
 errorm(shft,test) = errormshift;
+
+%%  Computing object error
+
+truexest = truexest*alphaerror;
+errorxshift = 10*log10( norm(truexest - truex)^2/ norm(truex)^2 );
+
+xestimate(:,shft) = truexest; 
+errorx(shft,test) = errorxshift;
+
+
+%% Computing measurement errors
+
 Yest=zeros(L,L);
 for k=0:L-1
     Yest(:,k+1) = abs( fft(xestimate(:,shft).*circshift(mestimate(:,shft),-k), L) ).^2;
